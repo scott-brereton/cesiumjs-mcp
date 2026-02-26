@@ -78,9 +78,48 @@ The current pitch transition (nadir to oblique) is hardcoded to begin at 50% thr
 
 ---
 
+### 6. JSON Metadata Manifest
+
+Output a `manifest.json` alongside the PNG frames after every render. Contains all metadata needed for downstream consumers to auto-configure playback.
+
+**Why:** Currently, if someone receives a frame directory without the MCP response context (e.g., handed off between team members), they have to guess the fps, resolution, and frame count. A Remotion `<Composition>` requires exactly `fps`, `durationInFrames`, and `width`/`height` — all of which can be read from the manifest. The `pattern` field (printf-style `%04d`) works with both Remotion's `staticFile()` and FFmpeg's `-i` flag.
+
+**Example output:**
+```json
+{
+  "version": 1,
+  "city": "Chicago",
+  "fps": 30,
+  "frameCount": 180,
+  "width": 1920,
+  "height": 1080,
+  "durationSeconds": 6,
+  "pattern": "frame_%04d.png",
+  "easing": "cinematic",
+  "camera": {
+    "startAltitude": 800000,
+    "endAltitude": 2000,
+    "tiltAngle": 45,
+    "heading": 0,
+    "latitude": 41.8781,
+    "longitude": -87.6298
+  },
+  "audioSync": {
+    "whooshPeakFrame": 54,
+    "whooshPeakTimestamp": 1.8
+  }
+}
+```
+
+The `audioSync` field is derived from the existing "cinematic" easing function's blend point at `t=0.3` — the moment of maximum apparent velocity. This gives audio editors a precise sync point for whoosh/swoosh sound effects.
+
+**Scope:** Low. Write one JSON file after frame capture completes. ~15 lines.
+
+---
+
 ## Tier 2 — New Animation Types
 
-### 6. `generate_orbit` Tool
+### 7. `generate_orbit` Tool
 
 Circle the camera around a point of interest at a fixed altitude and distance. The standard "establishing shot" in aerial cinematography — the natural companion to fly-in.
 
@@ -98,7 +137,7 @@ Circle the camera around a point of interest at a fixed altitude and distance. T
 
 ---
 
-### 7. Spiral Descent
+### 8. Spiral Descent
 
 The camera follows a helical path — circling the target while descending. Mimics helicopter or drone approach footage and is one of the most recognized cinematic aerial shots.
 
@@ -115,7 +154,7 @@ The camera follows a helical path — circling the target while descending. Mimi
 
 ---
 
-### 8. `generate_flyover` Tool (Point-to-Point)
+### 9. `generate_flyover` Tool (Point-to-Point)
 
 Fly between two cities via a great-circle arc, ascending to a cruise altitude at the midpoint. Creates the classic Google Earth "travel between places" animation.
 
@@ -133,7 +172,7 @@ Fly between two cities via a great-circle arc, ascending to a cruise altitude at
 
 ---
 
-### 9. Fly-In-to-Orbit Combination
+### 10. Fly-In-to-Orbit Combination
 
 A two-phase animation: fly-in to a location, then seamlessly transition into an orbit. One of Google Earth Studio's most popular templates.
 
@@ -147,7 +186,7 @@ A two-phase animation: fly-in to a location, then seamlessly transition into an 
 
 ## Tier 3 — Polish and Cinematic Quality
 
-### 10. Bounce / Overshoot Settle Easing
+### 11. Bounce / Overshoot Settle Easing
 
 A new easing option where the camera slightly overshoots (descends past the target altitude) then bounces back, adding energy to the ending. Mimics the natural behavior of a crane arm reaching its endpoint.
 
@@ -158,7 +197,7 @@ A new easing option where the camera slightly overshoots (descends past the targ
 
 ---
 
-### 11. Camera Shake / Handheld Feel
+### 12. Camera Shake / Handheld Feel
 
 Subtle pseudo-random perturbation to heading, pitch, and roll for a less robotic feel. Simulates micro-movements of a real drone or helicopter camera.
 
@@ -173,7 +212,7 @@ Subtle pseudo-random perturbation to heading, pitch, and roll for a less robotic
 
 ---
 
-### 12. Time of Day / Lighting
+### 13. Time of Day / Lighting
 
 Control the sun position to render golden hour, sunset, night (with city lights), or specific times. Google Earth Studio's most requested atmospheric feature.
 
@@ -185,7 +224,31 @@ Control the sun position to render golden hour, sunset, night (with city lights)
 
 ---
 
-### 13. FOV Animation
+### 14. Optional WebP Frame Format
+
+Add a `format` parameter (`"png" | "webp"`) to `generate_flyin`. WebP files are 25–35% smaller than PNG at visually lossless quality, which matters when generating 180 frames at 1920x1080 (easily 1–2 GB as PNGs).
+
+**Why:** Puppeteer already supports `type: "webp"` in `page.screenshot()`. Remotion's `<Img>` component handles WebP without issues. For workflows that prioritize speed and disk space over lossless fidelity, WebP is a significant improvement.
+
+**Scope:** Low. Change the screenshot `type` based on a parameter. Default remains `"png"` for backward compatibility. Do not add AVIF — Puppeteer does not support it as a screenshot format.
+
+---
+
+### 15. Bloom and Lens Flare Toggles
+
+Expose CesiumJS's built-in `PostProcessStageLibrary` effects as optional boolean flags.
+
+**Why:** CesiumJS ships with GLSL shaders for bloom, ambient occlusion, depth of field, lens flare, and silhouettes. Of these, **bloom** and **lens flare** are the most cinematically relevant for fly-in animations — bloom adds a soft glow to bright areas (water reflections, sunlit buildings), and lens flare adds a photographic quality when the sun is in frame.
+
+**Implementation:** In `viewer.html`, toggle `viewer.scene.postProcessStages` based on parameters passed during init.
+
+**Parameters:** `bloom: boolean` (default false), `lensFlare: boolean` (default false)
+
+**Scope:** Low. A few lines in the viewer initialization.
+
+---
+
+### 16. FOV Animation
 
 Animate the camera's field of view during the animation. Starting wide and narrowing creates compression and focus; starting narrow and widening creates an expansive reveal.
 
@@ -197,7 +260,7 @@ Animate the camera's field of view during the animation. Starting wide and narro
 
 ---
 
-### 14. Dutch Angle / Banking Roll
+### 17. Dutch Angle / Banking Roll
 
 Introduce controlled roll for dramatic compositions or realistic banking during curved paths.
 
@@ -211,7 +274,7 @@ Introduce controlled roll for dramatic compositions or realistic banking during 
 
 ## Tier 4 — Advanced Additions (Build if Demand Warrants)
 
-### 15. GeoJSON / KML Data Overlays
+### 18. GeoJSON / KML Data Overlays
 
 Render geographic data (borders, routes, regions) on the globe during animations.
 
@@ -223,7 +286,7 @@ Render geographic data (borders, routes, regions) on the globe during animations
 
 ---
 
-### 16. Marker and Label Annotations
+### 19. Marker and Label Annotations
 
 Render text labels or pin markers at specific coordinates during the animation.
 
@@ -235,7 +298,7 @@ Render text labels or pin markers at specific coordinates during the animation.
 
 ---
 
-### 17. Multi-Waypoint Spline Paths
+### 20. Multi-Waypoint Spline Paths
 
 Define a sequence of camera waypoints and interpolate smoothly between them using Catmull-Rom splines.
 
@@ -245,7 +308,7 @@ Define a sequence of camera waypoints and interpolate smoothly between them usin
 
 ---
 
-### 18. Animated Route Drawing
+### 21. Animated Route Drawing
 
 A polyline that progressively draws itself along a path during the animation — the "Indiana Jones travel line" effect.
 
@@ -255,17 +318,7 @@ A polyline that progressively draws itself along a path during the animation —
 
 ---
 
-### 19. JSON Metadata Manifest
-
-Output a `manifest.json` alongside the PNG frames containing animation metadata: fps, frame count, resolution, camera data per frame, city name, coordinates.
-
-**Why:** Makes it trivial for Remotion projects (or any consumer) to programmatically load the frame sequence with correct settings. Camera-per-frame data enables downstream compositing (text overlays that track geographic positions).
-
-**Scope:** Low. Write one JSON file after frame capture completes.
-
----
-
-### 20. Resolution Presets
+### 22. Resolution Presets
 
 Named resolution presets for common video platforms alongside the existing raw width/height parameters.
 
@@ -293,38 +346,47 @@ These ideas were evaluated and rejected for adding unnecessary complexity withou
 | **Location metadata tool** | Scope creep. Elevation, timezone, and population data are available from dozens of other APIs. |
 | **Easing curve visualization** | Solves a non-problem. An LLM choosing between 4 named profiles benefits from text descriptions, not images. |
 | **Custom waypoints in v1** | Premature abstraction. The value of opinionated tools (fly-in, orbit) is hiding complexity behind simple parameters. |
-| **Alpha channel / transparent sky** | Niche compositing need. Revisit only if multiple users request it. |
+| **Alpha channel / transparent sky** | CesiumJS has known artifacts with transparent backgrounds (black stroke around globe, translucent conflicts). Chroma-keying the uniform sky in Remotion is more reliable. |
 | **360° / VR rendering** | Requires multi-camera stitching. Entirely different rendering paradigm. Out of scope. |
 | **Historical imagery / timelapse** | Requires external imagery sources not available through standard CesiumJS. |
+| **Low-res proxy sequences** | Users can just pass smaller `width`/`height` for previews. Generating two sets doubles render time. |
+| **Text overlays and annotations in-frame** | Remotion's core competency. React components with CSS are superior to baking labels into PNGs. (Exception: 3D-positioned CesiumJS billboards in Tier 4.) |
+| **Color grading / LUT application** | CSS `filter` properties in Remotion (`contrast`, `saturate`, `hue-rotate`) handle this trivially. LUT support adds significant API surface. |
+| **Motion blur between frames** | Requires 4–8x sub-frame rendering or optical flow. Way outside scope. |
+| **Depth maps / motion vectors** | No consumer in Remotion's workflow. Remotion layers via React DOM, not depth-buffer compositing. |
+| **Batch rendering tool** | MCP clients can already sequence calls. Browser reuse optimization can be internal if needed. |
 
 ---
 
 ## Recommended Implementation Order
 
 **Phase 1 — Quick Wins** (each is a focused PR):
-1. `geocode_city` tool
-2. `preview_frame` tool
-3. Fly-out `direction` parameter
-4. Dynamic heading (`startHeading`/`endHeading`)
-5. Configurable `tiltOnset`
+1. `geocode_city` tool (#1)
+2. `preview_frame` tool (#2)
+3. Fly-out `direction` parameter (#3)
+4. Dynamic heading — `startHeading`/`endHeading` (#4)
+5. Configurable `tiltOnset` (#5)
+6. JSON metadata manifest with audio sync markers (#6)
 
 **Phase 2 — Refactor + New Animation Types:**
-6. Extract shared Puppeteer rendering session from `generate-flyin.ts`
-7. `generate_orbit` tool
-8. Spiral descent mode
-9. Bounce/overshoot easing
+7. Extract shared Puppeteer rendering session from `generate-flyin.ts`
+8. `generate_orbit` tool (#7)
+9. Spiral descent mode (#8)
+10. Bounce/overshoot easing (#11)
 
 **Phase 3 — Cinematic Polish:**
-10. Camera shake
-11. Time of day / lighting
-12. FOV animation
-13. Resolution presets
-14. JSON metadata manifest
+11. Camera shake (#12)
+12. Time of day / lighting (#13)
+13. Optional WebP frame format (#14)
+14. Bloom and lens flare toggles (#15)
+15. FOV animation (#16)
+16. Resolution presets (#22)
 
 **Phase 4 — Advanced (demand-driven):**
-15. `generate_flyover` (point-to-point)
-16. Fly-in-to-orbit combination
-17. GeoJSON overlays
-18. Markers and labels
-19. Animated route drawing
-20. Multi-waypoint spline paths
+17. `generate_flyover` point-to-point (#9)
+18. Fly-in-to-orbit combination (#10)
+19. Dutch angle / banking roll (#17)
+20. GeoJSON overlays (#18)
+21. Markers and labels (#19)
+22. Multi-waypoint spline paths (#20)
+23. Animated route drawing (#21)
