@@ -6,7 +6,10 @@ import { geocode } from "../utils/geocode.js";
 import { computeCameraFrames } from "../cesium/camera.js";
 import type { EasingName } from "../utils/easing.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Resolve paths relative to the package root (two levels up from dist/tools/)
+// so the viewer.html path stays correct regardless of where this file lives.
+const __filename = fileURLToPath(import.meta.url);
+const PACKAGE_ROOT = path.resolve(path.dirname(__filename), "../..");
 
 export interface FlyInOptions {
   city: string;
@@ -101,8 +104,8 @@ export async function generateFlyIn(opts: FlyInOptions): Promise<FlyInResult> {
   // Ensure output directory exists
   fs.mkdirSync(outputDir, { recursive: true });
 
-  // Resolve viewer HTML path
-  const viewerPath = path.resolve(__dirname, "../cesium/viewer.html");
+  // Resolve viewer HTML path from package root (works in both src/ and dist/)
+  const viewerPath = path.resolve(PACKAGE_ROOT, "dist/cesium/viewer.html");
   if (!fs.existsSync(viewerPath)) {
     throw new Error(`Viewer HTML not found at ${viewerPath}`);
   }
@@ -247,6 +250,19 @@ export async function generateFlyIn(opts: FlyInOptions): Promise<FlyInResult> {
         : "";
     throw new Error(`${baseMessage}${debugInfo}`);
   } finally {
+    // Destroy the CesiumJS viewer to release GPU resources before closing browser
+    try {
+      const pages = await browser.pages();
+      if (pages.length > 0) {
+        await pages[0].evaluate(() => {
+          if ((window as any).viewer && !(window as any).viewer.isDestroyed()) {
+            (window as any).viewer.destroy();
+          }
+        });
+      }
+    } catch {
+      // Best-effort cleanup — browser may already be in a bad state
+    }
     await browser.close();
   }
 }

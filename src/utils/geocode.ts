@@ -30,6 +30,9 @@ const CITY_LOOKUP: Record<string, GeoLocation> = {
 // In-memory cache for Nominatim results to avoid repeated lookups
 const nominatimCache = new Map<string, GeoLocation>();
 
+// Rate limiting for Nominatim: max 1 request per second per OSM usage policy
+let lastNominatimRequestMs = 0;
+
 /**
  * Look up a city by name. Tries local lookup table first,
  * then in-memory cache, then falls back to Nominatim API.
@@ -47,7 +50,14 @@ export async function geocode(city: string): Promise<GeoLocation> {
     return nominatimCache.get(key)!;
   }
 
-  // Fallback to Nominatim
+  // Fallback to Nominatim (rate-limited to 1 req/sec per OSM usage policy)
+  const now = Date.now();
+  const elapsed = now - lastNominatimRequestMs;
+  if (elapsed < 1000) {
+    await new Promise((r) => setTimeout(r, 1000 - elapsed));
+  }
+  lastNominatimRequestMs = Date.now();
+
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`;
   const response = await fetch(url, {
     headers: { "User-Agent": "cesiumjs-mcp/1.0" },
