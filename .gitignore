@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+
+# Test/generated output
+test-output/
+
+# OS files
+.DS_Store
+
+# Remotion build artifacts
+remotion-test/node_modules/
+remotion-test/out/
+remotion-test/node_modules/.cache/

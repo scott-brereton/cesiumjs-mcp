@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CesiumJS Fly-In Viewer</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.125/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.125/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <style>
+    html, body, #cesiumContainer {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    .cesium-credit-bottomcontainer,
+    .cesium-credit-expand-link {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <script>
+    let viewer = null;
+
+    /**
+     * Initialize the CesiumJS viewer with the given Ion token.
+     */
+    window.initViewer = async function(token) {
+      Cesium.Ion.defaultAccessToken = token;
+
+      viewer = new Cesium.Viewer('cesiumContainer', {
+        animation: false,
+        baseLayerPicker: false,
+        fullscreenButton: false,
+        geocoder: false,
+        homeButton: false,
+        infoBox: false,
+        sceneModePicker: false,
+        selectionIndicator: false,
+        timeline: false,
+        navigationHelpButton: false,
+        creditContainer: document.createElement('div'),
+        requestRenderMode: false,
+        maximumRenderTimeChange: Infinity,
+      });
+
+      // Add Cesium World Terrain
+      viewer.scene.setTerrain(Cesium.Terrain.fromWorldTerrain());
+
+      // Add the default 3D tileset (Google Photorealistic 3D Tiles via Cesium Ion)
+      try {
+        const tileset = await Cesium.createGooglePhotorealistic3DTileset();
+        viewer.scene.primitives.add(tileset);
+      } catch (e) {
+        console.warn('Could not load Google 3D Tiles, falling back to base imagery:', e);
+      }
+
+      return true;
+    };
+
+    /**
+     * Set the camera position. All angles in degrees.
+     */
+    window.setCameraPosition = function(lon, lat, alt, heading, pitch, roll) {
+      viewer.camera.setView({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt),
+        orientation: {
+          heading: Cesium.Math.toRadians(heading),
+          pitch: Cesium.Math.toRadians(pitch),
+          roll: Cesium.Math.toRadians(roll),
+        },
+      });
+    };
+
+    /**
+     * Check if all globe tiles are loaded.
+     * NOTE: Accesses private Cesium internals (_surface, _tileLoadQueueHigh/Medium).
+     * Pinned to Cesium 1.125 in the script tag above. If upgrading Cesium,
+     * verify these internals still exist — worst case the check returns true
+     * early and frames render with partially loaded tiles (no crash).
+     */
+    window.areTilesLoaded = function() {
+      if (!viewer) return false;
+      const globe = viewer.scene.globe;
+      const surface = globe._surface;
+      if (!surface || !surface._tileLoadQueueHigh) return globe.tilesLoaded;
+      return globe.tilesLoaded && surface._tileLoadQueueHigh.length === 0 && surface._tileLoadQueueMedium.length === 0;
+    };
+  </script>
+</body>
+</html>

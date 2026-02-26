@@ -1,0 +1,48 @@
+{
+  "name": "cesiumjs-flyin-mcp",
+  "version": "1.0.1",
+  "type": "module",
+  "description": "MCP server that generates Google Earth Studio-style fly-in animations using CesiumJS + Puppeteer",
+  "main": "dist/index.js",
+  "bin": {
+    "cesiumjs-flyin-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && cp src/cesium/viewer.html dist/cesium/viewer.html",
+    "start": "node dist/index.js",
+    "dev": "npm run build && npm run start",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "mcp",
+    "cesium",
+    "cesiumjs",
+    "fly-in",
+    "animation",
+    "3d-tiles",
+    "google-earth",
+    "puppeteer"
+  ],
+  "author": "Scott Brereton",
+  "license": "MIT",
+  "homepage": "https://github.com/scott-brereton/cesiumjs-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scott-brereton/cesiumjs-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^16.4.7",
+    "puppeteer": "^24.4.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
+  }
+}
